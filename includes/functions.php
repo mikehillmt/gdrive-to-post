@@ -11,42 +11,27 @@ if (!defined('ABSPATH')) {
  * Check if plugin is fully configured
  */
 function gdtp_is_configured() {
-    $key = get_option('gdtp_service_account_key', '');
+    $connected = gdtp()->google_drive->is_connected();
     $folder = get_option('gdtp_folder_id', '');
 
-    return !empty($key) && !empty($folder);
+    return $connected && !empty($folder);
 }
 
 /**
- * Get service account email from stored key
+ * Check if OAuth credentials (Client ID + Secret) are saved
  */
-function gdtp_get_service_account_email() {
-    $data = gdtp_get_service_account_data();
+function gdtp_has_oauth_credentials() {
+    $client_id = get_option('gdtp_oauth_client_id', '');
+    $client_secret = get_option('gdtp_oauth_client_secret', '');
 
-    if ($data && isset($data['client_email'])) {
-        return $data['client_email'];
-    }
-
-    return '';
+    return !empty($client_id) && !empty($client_secret);
 }
 
 /**
- * Get decoded service account data
+ * Get the connected Google account email
  */
-function gdtp_get_service_account_data() {
-    $key_json = get_option('gdtp_service_account_key', '');
-
-    if (empty($key_json)) {
-        return null;
-    }
-
-    $data = json_decode($key_json, true);
-
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        return null;
-    }
-
-    return $data;
+function gdtp_get_connected_email() {
+    return get_option('gdtp_oauth_user_email', '');
 }
 
 /**
@@ -148,6 +133,49 @@ function gdtp_sanitize_doc_html($html) {
     );
 
     return wp_kses($html, $allowed_tags);
+}
+
+/**
+ * Encrypt a string for storage
+ *
+ * Uses WordPress AUTH_KEY as encryption key with AES-256-CBC.
+ */
+function gdtp_encrypt($plaintext) {
+    if (empty($plaintext)) {
+        return '';
+    }
+
+    $key = hash('sha256', AUTH_KEY . 'gdtp_encryption', true);
+    $iv = openssl_random_pseudo_bytes(16);
+    $encrypted = openssl_encrypt($plaintext, 'aes-256-cbc', $key, 0, $iv);
+
+    if ($encrypted === false) {
+        return '';
+    }
+
+    return base64_encode($iv . '::' . $encrypted);
+}
+
+/**
+ * Decrypt a string from storage
+ */
+function gdtp_decrypt($encrypted_string) {
+    if (empty($encrypted_string)) {
+        return '';
+    }
+
+    $key = hash('sha256', AUTH_KEY . 'gdtp_encryption', true);
+    $data = base64_decode($encrypted_string);
+
+    if ($data === false || strpos($data, '::') === false) {
+        return '';
+    }
+
+    list($iv, $encrypted) = explode('::', $data, 2);
+
+    $decrypted = openssl_decrypt($encrypted, 'aes-256-cbc', $key, 0, $iv);
+
+    return $decrypted !== false ? $decrypted : '';
 }
 
 /**

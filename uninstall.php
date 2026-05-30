@@ -16,7 +16,13 @@ global $wpdb;
 $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}gdtp_imports");
 
 // Delete options
-delete_option('gdtp_service_account_key');
+delete_option('gdtp_oauth_client_id');
+delete_option('gdtp_oauth_client_secret');
+delete_option('gdtp_oauth_access_token');
+delete_option('gdtp_oauth_refresh_token');
+delete_option('gdtp_oauth_token_expiry');
+delete_option('gdtp_oauth_user_email');
+delete_option('gdtp_oauth_user_name');
 delete_option('gdtp_folder_id');
 delete_option('gdtp_folder_name');
 delete_option('gdtp_sync_frequency');
@@ -27,6 +33,13 @@ delete_option('gdtp_notification_email');
 delete_option('gdtp_email_notifications');
 delete_option('gdtp_publish_token_expiry');
 delete_option('gdtp_last_sync');
+
+// AI Image Generation options
+delete_option('gdtp_ai_image_enabled');
+delete_option('gdtp_openai_api_key');
+delete_option('gdtp_openai_api_key_hint');
+delete_option('gdtp_ai_image_style');
+delete_option('gdtp_ai_image_prompt_template');
 
 // Delete post meta
 $wpdb->query("DELETE FROM {$wpdb->postmeta} WHERE meta_key LIKE '_gdtp_%'");

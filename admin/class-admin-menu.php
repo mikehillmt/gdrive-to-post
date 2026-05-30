@@ -92,9 +92,13 @@ class GDTP_Admin_Menu {
                 'testing'          => __('Testing...', 'gdrive-to-post'),
                 'uploading'        => __('Uploading...', 'gdrive-to-post'),
                 'sending'          => __('Sending...', 'gdrive-to-post'),
-                'confirmRemoveKey' => __('Are you sure you want to remove the service account key?', 'gdrive-to-post'),
+                'confirmDisconnect' => __('Are you sure you want to disconnect from Google Drive?', 'gdrive-to-post'),
                 'error'            => __('An error occurred. Please try again.', 'gdrive-to-post'),
                 'selectFolder'     => __('Select this folder', 'gdrive-to-post'),
+                'generatingImage'  => __('Generating image...', 'gdrive-to-post'),
+                'testingOpenAI'    => __('Testing...', 'gdrive-to-post'),
+                'savingKey'        => __('Saving...', 'gdrive-to-post'),
+                'confirmRemoveOpenAIKey' => __('Are you sure you want to remove the OpenAI API key?', 'gdrive-to-post'),
             ),
         ));
     }
@@ -154,6 +158,19 @@ class GDTP_Admin_Menu {
         $expiry = (int) ($_POST['publish_token_expiry'] ?? 7);
         $expiry = max(1, min(30, $expiry));
         update_option('gdtp_publish_token_expiry', $expiry);
+
+        // AI Image Generation settings
+        update_option('gdtp_ai_image_enabled', isset($_POST['ai_image_enabled']));
+
+        $ai_style = sanitize_text_field($_POST['ai_image_style'] ?? 'photographic');
+        $valid_styles = array_keys(GDTP_Image_Generator::get_image_styles());
+        if (!in_array($ai_style, $valid_styles)) {
+            $ai_style = 'photographic';
+        }
+        update_option('gdtp_ai_image_style', $ai_style);
+
+        $prompt_template = sanitize_textarea_field($_POST['ai_image_prompt_template'] ?? '');
+        update_option('gdtp_ai_image_prompt_template', $prompt_template);
 
         add_settings_error('gdtp_settings', 'settings_saved', __('Settings saved.', 'gdrive-to-post'), 'success');
     }

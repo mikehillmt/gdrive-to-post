@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
 }
 
 $is_configured = gdtp_is_configured();
-$sa_email = gdtp_get_service_account_email();
+$connected_email = gdtp_get_connected_email();
 $folder_id = get_option('gdtp_folder_id', '');
 $folder_name = get_option('gdtp_folder_name', '');
 $sync_status = gdtp()->sync->get_sync_status();
@@ -47,14 +47,14 @@ $recent_imports = gdtp()->database->get_recent_imports(10);
 
         <table class="form-table">
             <tr>
-                <th><?php esc_html_e('Service Account', 'gdrive-to-post'); ?></th>
+                <th><?php esc_html_e('Google Account', 'gdrive-to-post'); ?></th>
                 <td>
-                    <?php if ($sa_email) : ?>
+                    <?php if ($connected_email) : ?>
                         <span class="gdtp-status gdtp-status-active"><?php esc_html_e('Connected', 'gdrive-to-post'); ?></span>
-                        <code><?php echo esc_html($sa_email); ?></code>
+                        <code><?php echo esc_html($connected_email); ?></code>
                     <?php else : ?>
-                        <span class="gdtp-status gdtp-status-error"><?php esc_html_e('Not configured', 'gdrive-to-post'); ?></span>
-                        <a href="<?php echo esc_url(admin_url('admin.php?page=gdrive-to-post-settings')); ?>"><?php esc_html_e('Configure', 'gdrive-to-post'); ?></a>
+                        <span class="gdtp-status gdtp-status-error"><?php esc_html_e('Not connected', 'gdrive-to-post'); ?></span>
+                        <a href="<?php echo esc_url(admin_url('admin.php?page=gdrive-to-post-settings')); ?>"><?php esc_html_e('Connect', 'gdrive-to-post'); ?></a>
                     <?php endif; ?>
                 </td>
             </tr>

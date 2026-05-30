@@ -14,10 +14,10 @@
             // Sync
             $('#gdtp-sync-now').on('click', this.runSync);
 
-            // Key management
-            $('#gdtp-upload-key').on('click', this.triggerFileUpload);
-            $('#gdtp-key-file').on('change', this.uploadKey);
-            $('#gdtp-remove-key').on('click', this.removeKey);
+            // OAuth management
+            $('#gdtp-save-oauth-creds').on('click', this.saveOAuthCreds);
+            $('#gdtp-remove-oauth-creds').on('click', this.removeOAuthCreds);
+            $('#gdtp-disconnect-google').on('click', this.disconnectGoogle);
 
             // Connection test
             $('#gdtp-test-connection').on('click', this.testConnection);
@@ -30,6 +30,12 @@
 
             // Test email
             $('#gdtp-test-email').on('click', this.sendTestEmail);
+
+            // AI Image Generation
+            $('#gdtp-save-openai-key').on('click', this.saveOpenAIKey);
+            $('#gdtp-remove-openai-key').on('click', this.removeOpenAIKey);
+            $('#gdtp-test-openai').on('click', this.testOpenAI);
+            $('#gdtp-test-image-gen').on('click', this.testImageGen);
         },
 
         runSync: function() {
@@ -69,59 +75,50 @@
             });
         },
 
-        triggerFileUpload: function() {
-            $('#gdtp-key-file').trigger('click');
-        },
+        saveOAuthCreds: function() {
+            var $btn = $(this);
+            var $message = $('#gdtp-oauth-message');
+            var clientId = $('#gdtp-oauth-client-id').val().trim();
+            var clientSecret = $('#gdtp-oauth-client-secret').val().trim();
 
-        uploadKey: function() {
-            var file = this.files[0];
-            if (!file) return;
+            if (!clientId || !clientSecret) {
+                $message.text('Both Client ID and Client Secret are required.').addClass('error');
+                return;
+            }
 
-            var reader = new FileReader();
-            var $message = $('#gdtp-upload-message');
+            $btn.prop('disabled', true).text(gdtpAdmin.strings.savingKey);
+            $message.text('').removeClass('success error');
 
-            $message.text(gdtpAdmin.strings.uploading).removeClass('success error');
-
-            reader.onload = function(e) {
-                var keyJson = e.target.result;
-
-                // Basic JSON validation
-                try {
-                    JSON.parse(keyJson);
-                } catch (err) {
-                    $message.text('Invalid JSON file.').addClass('error');
-                    return;
-                }
-
-                $.ajax({
-                    url: gdtpAdmin.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'gdtp_upload_key',
-                        nonce: gdtpAdmin.nonce,
-                        key_json: keyJson
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            $message.text(response.data.message).addClass('success');
-                            setTimeout(function() {
-                                location.reload();
-                            }, 1000);
-                        } else {
-                            $message.text(response.data.message).addClass('error');
+            $.ajax({
+                url: gdtpAdmin.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'gdtp_save_oauth_creds',
+                    nonce: gdtpAdmin.nonce,
+                    client_id: clientId,
+                    client_secret: clientSecret
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $message.text(response.data.message).addClass('success');
+                        // Redirect to Google OAuth
+                        if (response.data.auth_url) {
+                            window.location.href = response.data.auth_url;
                         }
-                    },
-                    error: function() {
-                        $message.text(gdtpAdmin.strings.error).addClass('error');
+                    } else {
+                        $message.text(response.data.message).addClass('error');
+                        $btn.prop('disabled', false).html('<span class="dashicons dashicons-saved" style="vertical-align: middle; margin-top: -2px;"></span> Save & Connect with Google');
                     }
-                });
-            };
-
-            reader.readAsText(file);
+                },
+                error: function() {
+                    $message.text(gdtpAdmin.strings.error).addClass('error');
+                    $btn.prop('disabled', false).html('<span class="dashicons dashicons-saved" style="vertical-align: middle; margin-top: -2px;"></span> Save & Connect with Google');
+                }
+            });
         },
 
-        removeKey: function() {
-            if (!confirm(gdtpAdmin.strings.confirmRemoveKey)) {
+        removeOAuthCreds: function() {
+            if (!confirm(gdtpAdmin.strings.confirmDisconnect)) {
                 return;
             }
 
@@ -129,7 +126,30 @@
                 url: gdtpAdmin.ajaxUrl,
                 type: 'POST',
                 data: {
-                    action: 'gdtp_remove_key',
+                    action: 'gdtp_remove_oauth_creds',
+                    nonce: gdtpAdmin.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    }
+                },
+                error: function() {
+                    alert(gdtpAdmin.strings.error);
+                }
+            });
+        },
+
+        disconnectGoogle: function() {
+            if (!confirm(gdtpAdmin.strings.confirmDisconnect)) {
+                return;
+            }
+
+            $.ajax({
+                url: gdtpAdmin.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'gdtp_disconnect_google',
                     nonce: gdtpAdmin.nonce
                 },
                 success: function(response) {
@@ -314,6 +334,132 @@
                 error: function() {
                     $message.text(gdtpAdmin.strings.error).addClass('error');
                     $btn.prop('disabled', false).text('Send Test Email');
+                }
+            });
+        },
+
+        saveOpenAIKey: function() {
+            var $btn = $(this);
+            var $message = $('#gdtp-openai-message');
+            var apiKey = $('#gdtp-openai-key-input').val().trim();
+
+            if (!apiKey) {
+                $message.text('Please enter an API key.').addClass('error');
+                return;
+            }
+
+            $btn.prop('disabled', true).text(gdtpAdmin.strings.savingKey);
+            $message.text('').removeClass('success error');
+
+            $.ajax({
+                url: gdtpAdmin.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'gdtp_save_openai_key',
+                    nonce: gdtpAdmin.nonce,
+                    api_key: apiKey
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $message.text(response.data.message).addClass('success');
+                        setTimeout(function() { location.reload(); }, 1000);
+                    } else {
+                        $message.text(response.data.message).addClass('error');
+                        $btn.prop('disabled', false).html('<span class="dashicons dashicons-upload" style="vertical-align: middle; margin-top: -2px;"></span> Save API Key');
+                    }
+                },
+                error: function() {
+                    $message.text(gdtpAdmin.strings.error).addClass('error');
+                    $btn.prop('disabled', false).html('<span class="dashicons dashicons-upload" style="vertical-align: middle; margin-top: -2px;"></span> Save API Key');
+                }
+            });
+        },
+
+        removeOpenAIKey: function() {
+            if (!confirm(gdtpAdmin.strings.confirmRemoveOpenAIKey)) {
+                return;
+            }
+
+            $.ajax({
+                url: gdtpAdmin.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'gdtp_remove_openai_key',
+                    nonce: gdtpAdmin.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    }
+                },
+                error: function() {
+                    alert(gdtpAdmin.strings.error);
+                }
+            });
+        },
+
+        testOpenAI: function() {
+            var $btn = $(this);
+            var $message = $('#gdtp-openai-message');
+
+            $btn.prop('disabled', true).text(gdtpAdmin.strings.testingOpenAI);
+            $message.text('').removeClass('success error');
+
+            $.ajax({
+                url: gdtpAdmin.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'gdtp_test_openai',
+                    nonce: gdtpAdmin.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $message.text(response.data.message).addClass('success');
+                    } else {
+                        $message.text(response.data.message).addClass('error');
+                    }
+                    $btn.prop('disabled', false).html('<span class="dashicons dashicons-yes-alt" style="vertical-align: middle; margin-top: -2px;"></span> Test Connection');
+                },
+                error: function() {
+                    $message.text(gdtpAdmin.strings.error).addClass('error');
+                    $btn.prop('disabled', false).html('<span class="dashicons dashicons-yes-alt" style="vertical-align: middle; margin-top: -2px;"></span> Test Connection');
+                }
+            });
+        },
+
+        testImageGen: function() {
+            var $btn = $(this);
+            var $message = $('#gdtp-test-image-message');
+            var $preview = $('#gdtp-test-image-preview');
+
+            $btn.prop('disabled', true);
+            $message.text(gdtpAdmin.strings.generatingImage).removeClass('success error');
+            $preview.hide();
+
+            $.ajax({
+                url: gdtpAdmin.ajaxUrl,
+                type: 'POST',
+                timeout: 130000,
+                data: {
+                    action: 'gdtp_test_image_gen',
+                    nonce: gdtpAdmin.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $message.text(response.data.message).addClass('success');
+                        if (response.data.image_url) {
+                            $preview.find('img').attr('src', response.data.image_url);
+                            $preview.show();
+                        }
+                    } else {
+                        $message.text(response.data.message).addClass('error');
+                    }
+                    $btn.prop('disabled', false);
+                },
+                error: function(xhr, status) {
+                    var msg = status === 'timeout' ? 'Image generation timed out. Please try again.' : gdtpAdmin.strings.error;
+                    $message.text(msg).addClass('error');
+                    $btn.prop('disabled', false);
                 }
             });
         },

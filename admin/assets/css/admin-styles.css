@@ -445,3 +445,18 @@
         display: none;
     }
 }
+
+/* AI Image Generation */
+#gdtp-openai-key-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#gdtp-test-image-preview img {
+    max-width: 400px;
+    border-radius: 4px;
+    border: 1px solid #c3c4c7;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}

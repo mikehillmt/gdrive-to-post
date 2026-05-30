@@ -176,9 +176,14 @@ class GDTP_Sync {
             return new WP_Error('empty_content', __('Document produced empty content after processing.', 'gdrive-to-post'));
         }
 
+        // Clean up title (strip "Subject:" prefix, extra whitespace)
+        $clean_title = $doc['name'];
+        $clean_title = preg_replace('/^\s*subject\s*[:\-]\s*/i', '', $clean_title);
+        $clean_title = trim($clean_title);
+
         // Create post
         $post_data = array(
-            'post_title'   => sanitize_text_field($doc['name']),
+            'post_title'   => sanitize_text_field($clean_title),
             'post_content' => $processed['content'],
             'post_status'  => get_option('gdtp_default_status', 'draft'),
             'post_author'  => (int) get_option('gdtp_default_author', 1),
@@ -201,6 +206,19 @@ class GDTP_Sync {
         // Set first image as featured image
         if (!empty($processed['images'])) {
             set_post_thumbnail($post_id, $processed['images'][0]);
+        }
+
+        // Generate AI featured image if enabled and post has no featured image
+        if (!has_post_thumbnail($post_id) && get_option('gdtp_ai_image_enabled', false)) {
+            $ai_result = gdtp()->image_generator->generate_featured_image(
+                $post_id,
+                $processed['content'],
+                $doc['name']
+            );
+
+            if (is_wp_error($ai_result)) {
+                gdtp_log('AI image generation failed for post ' . $post_id . ': ' . $ai_result->get_error_message(), 'warning');
+            }
         }
 
         // Generate publish token for one-click publishing
